@@ -1,5 +1,7 @@
 import pandas as pd
 from pandas import DataFrame
+from Bio import Phylo
+from io import StringIO
 
 
 def UPGMA_formula(matrix: DataFrame, i: str, j: str, k: str):
@@ -62,25 +64,61 @@ def merge(matrix: DataFrame, i, j, all_distances):
 
 def run_algorithm(matrix: DataFrame, algorithm: str):
     current_matrix = matrix.copy()
+    cluster_dict = {}
 
     while len(current_matrix) > 1:
         # find min indices
-        min_indices, _ = find_min_in_matrix(current_matrix)
+        min_indices, min_distance = find_min_in_matrix(current_matrix)
         i, j = min_indices
-        print(min_indices)
+        # print(min_indices)
 
         # calculate all distances
         all_distances = calculate_all_distances(current_matrix, i, j, algorithm)
-        print(all_distances)
+        # print(all_distances)
 
         current_matrix = merge(current_matrix, i, j, all_distances)
-        print(f"{current_matrix}\n")
+        # print(f"{current_matrix}")
+
+        new_cluster = f"({i},{j})"
+        # print(f"new cluster: {new_cluster}")
+
+        cluster_dict[new_cluster] = min_distance
+
+    return cluster_dict
+
+
+def create_newick_tree(cluster_dict: dict):
+    newick_dict = {}
+    for key, value in cluster_dict.items():
+        i, j = tuple(key.strip("()").split(","))
+
+        distance = value / 2
+
+        # check if previous the leaf is part of a merged cluster
+        cluster_i = newick_dict[i] if i in newick_dict else f"{i}:{distance}"
+        cluster_j = newick_dict[j] if j in newick_dict else f"{j}:{distance}"
+
+        cluster = f"({cluster_i}, {cluster_j})"
+
+        newick_dict[f"{i}{j}"] = cluster
+
+    return f"{list(newick_dict.values())[-1]};"
+
+
+def output_tree(newick_string, output):
+    tree = Phylo.read(StringIO(newick_string), "newick")
+    Phylo.write(tree, output, "newick")
 
 
 def main():
-    matrix = pd.read_csv("distances_test.csv", index_col=0)
+    matrix = pd.read_csv("distances_ultrametric.csv", index_col=0)
 
-    run_algorithm(matrix, "upgma")
+    cluster_dict = run_algorithm(matrix, "upgma")
+
+    newick_string = create_newick_tree(cluster_dict)
+
+    print(newick_string)
+    output_tree(newick_string, "output_tree.tre")
 
 
 if __name__ == "__main__":
