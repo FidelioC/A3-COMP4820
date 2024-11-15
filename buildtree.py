@@ -106,8 +106,12 @@ def create_newick_tree(cluster_dict: dict):
 
 
 def output_tree(newick_string, output):
-    tree = Phylo.read(StringIO(newick_string), "newick")
-    Phylo.write(tree, output, "newick")
+    if output:
+        with open(output, "w", encoding="utf-8") as file:
+            file.write(newick_string)
+            print(f"File written successfully to {output}")
+    else:
+        print(newick_string)
 
 
 def main():
