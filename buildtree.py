@@ -24,7 +24,7 @@ def find_min_in_matrix(matrix: DataFrame):
                 min_distance = curr_distance
                 min_indices = (i, j)
 
-    return min_indices, int(min_distance)
+    return min_indices, float(min_distance)
 
 
 def calculate_all_distances(matrix: DataFrame, i: str, j: str, algorithm):
@@ -89,20 +89,56 @@ def run_algorithm(matrix: DataFrame, algorithm: str):
 
 def create_newick_tree(cluster_dict: dict):
     newick_dict = {}
+    distances = {}
+    i_have_merged = False
+    j_have_merged = False
     for key, value in cluster_dict.items():
         i, j = tuple(key.strip("()").split(","))
 
         distance = value / 2
 
         # check if previous the leaf is part of a merged cluster
-        cluster_i = newick_dict[i] if i in newick_dict else f"{i}:{distance}"
-        cluster_j = newick_dict[j] if j in newick_dict else f"{j}:{distance}"
+        if i in newick_dict:
+            cluster_i = newick_dict[i]
+            i_have_merged = True
+        else:
+            cluster_i = i
 
-        cluster = f"({cluster_i}, {cluster_j})"
+        if j in newick_dict:
+            cluster_j = newick_dict[j]
+            j_have_merged = True
+        else:
+            cluster_j = j
+
+        # print(f"i:{i} j:{j}")
+        # print(f"curr_distance:{distance}, value:{value}")
+        # print(f"distances:{distances}")
+        # print(f"cluster_i:{cluster_i} cluster_j:{cluster_j}")
+
+        if i_have_merged or j_have_merged:
+            if j_have_merged:
+                cluster = (
+                    f"({cluster_i}:{distance}, {cluster_j}:{distance-distances[j]})"
+                )
+            elif i_have_merged:
+                cluster = (
+                    f"({cluster_i}, {cluster_j}:{distance}:{distance-distances[i]})"
+                )
+        else:
+            cluster = f"({cluster_i}:{distance}, {cluster_j}:{distance})"
+
+        # print(f"cluster:{cluster}")
 
         newick_dict[f"{i}{j}"] = cluster
+        distances[f"{i}{j}"] = distance
 
-    return f"{list(newick_dict.values())[-1]};"
+        # print(newick_dict)
+        # print(distances)
+        # print("\n")
+
+        i_have_merged = False
+        j_have_merged = False
+    return f"{list(newick_dict.values())[-1]}:0;"
 
 
 def output_tree(newick_string, output):
@@ -115,7 +151,7 @@ def output_tree(newick_string, output):
 
 
 def main():
-    matrix = pd.read_csv("distances_ultrametric.csv", index_col=0)
+    matrix = pd.read_csv("distances.csv", index_col=0)
 
     cluster_dict = run_algorithm(matrix, "upgma")
 
