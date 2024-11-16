@@ -1,7 +1,6 @@
 import pandas as pd
 from pandas import DataFrame
-from Bio import Phylo
-from io import StringIO
+import click
 
 
 def UPGMA_formula(matrix: DataFrame, i: str, j: str, k: str):
@@ -150,16 +149,19 @@ def output_tree(newick_string, output):
         print(newick_string)
 
 
-def main():
-    matrix = pd.read_csv("distances.csv", index_col=0)
+@click.command()
+@click.option("--matrix", required=True)
+@click.option("--algorithm", default="wpgma")
+@click.option("--output")
+def commands_processing(matrix, algorithm, output):
+    matrix = pd.read_csv(matrix, index_col=0)
 
-    cluster_dict = run_algorithm(matrix, "upgma")
+    cluster_dict = run_algorithm(matrix, algorithm)
 
     newick_string = create_newick_tree(cluster_dict)
 
-    print(newick_string)
-    output_tree(newick_string, "output_tree.tre")
+    output_tree(newick_string, output)
 
 
 if __name__ == "__main__":
-    main()
+    commands_processing()
